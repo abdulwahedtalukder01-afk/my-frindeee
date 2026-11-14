@@ -35,6 +35,7 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 0.85rem;
+      margin-left: 5px;
     }
     .btn-small:hover { background: #00f0ff; color: #02080d; }
 
@@ -129,7 +130,7 @@
       display: flex;
       gap: 10px;
     }
-    input[type="text"] {
+    input[type="text"], input[type="password"] {
       flex: 1;
       padding: 12px;
       border-radius: 8px;
@@ -140,7 +141,7 @@
       outline: none;
     }
     button.action-btn {
-      padding: 0 18px;
+      padding: 10px 18px;
       border-radius: 8px;
       border: none;
       background: #00f0ff;
@@ -149,6 +150,7 @@
       cursor: pointer;
       font-size: 1rem;
     }
+    button.action-btn:hover { background: #66f7ff; }
     button.mic-btn { background: #0077ff; color: #fff; }
     button.mic-btn.active { background: #ff3b3b; }
 
@@ -180,8 +182,8 @@
   <header>
     <h1>J.A.R.V.I.S.</h1>
     <div>
-      <button class="btn-small" onclick="toggleVoice()">🔊 ভয়েস: <span id="voice-status">ON</span></button>
-      <button class="btn-small" onclick="openModal()">⚙️ Gemini Key</button>
+      <button type="button" class="btn-small" id="voice-btn">🔊 ভয়েস: <span id="voice-status">ON</span></button>
+      <button type="button" class="btn-small" id="key-btn">⚙️ Gemini Key</button>
     </div>
   </header>
 
@@ -196,9 +198,9 @@
   </div>
 
   <div class="controls">
-    <button class="action-btn mic-btn" id="mic-btn" onclick="startListening()">🎤</button>
-    <input type="text" id="user-input" placeholder="এখানে লিখুন বা মাইকে কথা বলুন..." onkeypress="if(event.key==='Enter') sendMessage()" />
-    <button class="action-btn" onclick="sendMessage()">পাঠান</button>
+    <button type="button" class="action-btn mic-btn" id="mic-btn">🎤</button>
+    <input type="text" id="user-input" placeholder="এখানে লিখুন বা মাইকে কথা বলুন..." />
+    <button type="button" class="action-btn" id="send-btn">পাঠান</button>
   </div>
 
   <!-- Gemini API Key Setup Modal -->
@@ -207,7 +209,8 @@
       <h3>Google Gemini API Key সেট করুন</h3>
       <p>আপনার Key শুধুমাত্র আপনার ব্রাউজারে সেভ থাকবে।</p>
       <input type="password" id="api-key-input" placeholder="AIzaSyxxxxxxxxxxxx" />
-      <button class="action-btn" style="width:100%; padding:10px;" onclick="saveApiKey()">সেভ করুন</button>
+      <button type="button" class="action-btn" style="width:100%;" id="save-key-btn">সেভ করুন</button>
+      <button type="button" class="btn-small" style="margin-top:10px; width:100%;" id="close-modal-btn">বন্ধ করুন</button>
     </div>
   </div>
 
@@ -216,30 +219,50 @@
     let voiceEnabled = true;
     let chatHistory = [];
 
+    const apiModal = document.getElementById("api-modal");
+    const apiKeyInput = document.getElementById("api-key-input");
+    const userInput = document.getElementById("user-input");
+    const coreText = document.getElementById("core-text");
+    const core = document.getElementById("core");
+    const micBtn = document.getElementById("mic-btn");
+
     if (!apiKey) {
-      document.getElementById("api-modal").style.display = "flex";
+      apiModal.style.display = "flex";
     }
 
-    function openModal() {
-      document.getElementById("api-key-input").value = apiKey;
-      document.getElementById("api-modal").style.display = "flex";
-    }
+    document.getElementById("key-btn").addEventListener("click", () => {
+      apiKeyInput.value = apiKey;
+      apiModal.style.display = "flex";
+    });
 
-    function saveApiKey() {
-      const input = document.getElementById("api-key-input").value.trim();
+    document.getElementById("close-modal-btn").addEventListener("click", () => {
+      apiModal.style.display = "none";
+    });
+
+    document.getElementById("save-key-btn").addEventListener("click", () => {
+      const input = apiKeyInput.value.trim();
       if (input) {
         apiKey = input;
         localStorage.setItem("jarvis_gemini_key", apiKey);
-        document.getElementById("api-modal").style.display = "none";
+        apiModal.style.display = "none";
         addMessage("Gemini API Key সফলভাবে সেট হয়েছে স্যার! এখন কথা বলতে পারেন।", "ai-msg");
+      } else {
+        alert("অনুগ্রহ করে সঠিক API Key দিন।");
       }
-    }
+    });
 
-    function toggleVoice() {
+    document.getElementById("voice-btn").addEventListener("click", () => {
       voiceEnabled = !voiceEnabled;
       document.getElementById("voice-status").innerText = voiceEnabled ? "ON" : "OFF";
-      if (!voiceEnabled) window.speechSynthesis.cancel();
-    }
+      if (!voiceEnabled && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    });
+
+    document.getElementById("send-btn").addEventListener("click", sendMessage);
+    userInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
 
     function speak(text) {
       if (!voiceEnabled || !('speechSynthesis' in window)) return;
@@ -260,16 +283,18 @@
     }
 
     async function sendMessage() {
-      const inputEl = document.getElementById("user-input");
-      const text = inputEl.value.trim();
+      const text = userInput.value.trim();
       if (!text) return;
-      if (!apiKey) { openModal(); return; }
+      if (!apiKey) {
+        apiModal.style.display = "flex";
+        return;
+      }
 
       addMessage(text, "user-msg");
-      inputEl.value = "";
+      userInput.value = "";
       chatHistory.push({ role: "user", parts: [{ text: text }] });
 
-      document.getElementById("core-text").innerText = "THINKING";
+      coreText.innerText = "THINKING";
 
       try {
         const url = `https://googleapis.com{apiKey}`;
@@ -291,28 +316,3 @@
         chatHistory.push({ role: "model", parts: [{ text: reply }] });
         addMessage(reply, "ai-msg");
         speak(reply);
-      } catch (err) {
-        addMessage("ত্রুটি হয়েছে: " + err.message, "ai-msg");
-      } finally {
-        document.getElementById("core-text").innerText = "ONLINE";
-      }
-    }
-
-    function startListening() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("দুঃখিত, আপনার ব্রাউজার ভয়েস ইনপুট সাপোর্ট করে না। Google Chrome ব্যবহার করুন।");
-        return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'bn-BD';
-      const core = document.getElementById("core");
-      const micBtn = document.getElementById("mic-btn");
-
-      recognition.onstart = () => {
-        core.classList.add("listening");
-        micBtn.classList.add("active");
-        document.getElementById("core-text").innerText = "LISTENING";
-      };
-
-      recognition.onresult = (event) => {
