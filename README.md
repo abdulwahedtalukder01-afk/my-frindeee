@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>J.A.R.V.I.S. - Gemini AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body {
+      background: radial-gradient(circle at center, #081b29 0%, #02080d 100%);
+      color: #00f0ff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      overflow: hidden;
+    }
+    header {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+      padding-bottom: 10px;
+    }
+    header h1 { font-size: 1.4rem; letter-spacing: 3px; text-shadow: 0 0 10px #00f0ff; }
+    .btn-small {
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid #00f0ff;
+      color: #00f0ff;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-small:hover { background: #00f0ff; color: #02080d; }
+
+    /* JARVIS Arc Reactor Core */
+    .core-container {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid transparent;
+    }
+    .ring-1 {
+      width: 150px; height: 150px;
+      border-top: 3px solid #00f0ff;
+      border-bottom: 3px solid #00f0ff;
+      animation: spin 6s linear infinite;
+    }
+    .ring-2 {
+      width: 115px; height: 115px;
+      border-left: 3px dashed #00a2ff;
+      border-right: 3px dashed #00a2ff;
+      animation: spinReverse 4s linear infinite;
+    }
+    .core-center {
+      width: 75px; height: 75px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00f0ff 0%, #005177 80%);
+      box-shadow: 0 0 25px #00f0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #02080d;
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+    .listening .core-center {
+      background: radial-gradient(circle, #ff3b3b 0%, #770000 80%);
+      box-shadow: 0 0 35px #ff3b3b;
+      transform: scale(1.1);
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes spinReverse { 100% { transform: rotate(-360deg); } }
+
+    /* Chat Box */
+    #chat-box {
+      width: 100%;
+      max-width: 800px;
+      flex: 1;
+      background: rgba(0, 20, 35, 0.6);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 10px;
+      padding: 15px;
+      overflow-y: auto;
+      margin: 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg {
+      padding: 10px 14px;
+      border-radius: 8px;
+      max-width: 80%;
+      line-height: 1.5;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+    }
+    .user-msg {
+      align-self: flex-end;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #ffffff;
+    }
+    .ai-msg {
+      align-self: flex-start;
+      background: rgba(0, 80, 120, 0.25);
+      border-left: 3px solid #00f0ff;
+      color: #c8f7ff;
+    }
+
+    /* Controls */
+    .controls {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #00f0ff;
+      background: rgba(0, 15, 25, 0.9);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+    button.action-btn {
+      padding: 0 18px;
+      border-radius: 8px;
+      border: none;
+      background: #00f0ff;
+      color: #02080d;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button.mic-btn { background: #0077ff; color: #fff; }
+    button.mic-btn.active { background: #ff3b3b; }
+
+    /* Modal */
+    #api-modal {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-content {
+      background: #061826;
+      border: 1px solid #00f0ff;
+      padding: 25px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .modal-content h3 { margin-bottom: 10px; }
+    .modal-content p { font-size: 0.85rem; color: #9ad9e6; margin-bottom: 15px; }
+    .modal-content input { width: 100%; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>J.A.R.V.I.S.</h1>
+    <div>
+      <button class="btn-small" onclick="toggleVoice()">🔊 ভয়েস: <span id="voice-status">ON</span></button>
+      <button class="btn-small" onclick="openModal()">⚙️ Gemini Key</button>
+    </div>
+  </header>
+
+  <div class="core-container" id="core">
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="core-center" id="core-text">ONLINE</div>
+  </div>
+
+  <div id="chat-box">
+    <div class="msg ai-msg">স্বাগতম স্যার! আমি JARVIS (Gemini Powered)। কীভাবে আপনাকে সাহায্য করতে পারি?</div>
+  </div>
+
+  <div class="controls">
+    <button class="action-btn mic-btn" id="mic-btn" onclick="startListening()">🎤</button>
+    <input type="text" id="user-input" placeholder="এখানে লিখুন বা মাইকে কথা বলুন..." onkeypress="if(event.key==='Enter') sendMessage()" />
+    <button class="action-btn" onclick="sendMessage()">পাঠান</button>
+  </div>
+
+  <!-- Gemini API Key Setup Modal -->
+  <div id="api-modal">
+    <div class="modal-content">
+      <h3>Google Gemini API Key সেট করুন</h3>
+      <p>আপনার Key শুধুমাত্র আপনার ব্রাউজারে সেভ থাকবে।</p>
+      <input type="password" id="api-key-input" placeholder="AIzaSyxxxxxxxxxxxx" />
+      <button class="action-btn" style="width:100%; padding:10px;" onclick="saveApiKey()">সেভ করুন</button>
+    </div>
+  </div>
+
+  <script>
+    let apiKey = localStorage.getItem("jarvis_gemini_key") || "";
+    let voiceEnabled = true;
+    let chatHistory = [];
+
+    if (!apiKey) {
+      document.getElementById("api-modal").style.display = "flex";
+    }
+
+    function openModal() {
+      document.getElementById("api-key-input").value = apiKey;
+      document.getElementById("api-modal").style.display = "flex";
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById("api-key-input").value.trim();
+      if (input) {
+        apiKey = input;
+        localStorage.setItem("jarvis_gemini_key", apiKey);
+        document.getElementById("api-modal").style.display = "none";
+        addMessage("Gemini API Key সফলভাবে সেট হয়েছে স্যার! এখন কথা বলতে পারেন।", "ai-msg");
+      }
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      document.getElementById("voice-status").innerText = voiceEnabled ? "ON" : "OFF";
+      if (!voiceEnabled) window.speechSynthesis.cancel();
+    }
+
+    function speak(text) {
+      if (!voiceEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`]/g, ''));
+      utterance.lang = /[\u0980-\u09FF]/.test(text) ? 'bn-BD' : 'en-US';
+      utterance.rate = 1.05;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function addMessage(text, className) {
+      const chatBox = document.getElementById("chat-box");
+      const div = document.createElement("div");
+      div.className = `msg ${className}`;
+      div.innerText = text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const inputEl = document.getElementById("user-input");
+      const text = inputEl.value.trim();
+      if (!text) return;
+      if (!apiKey) { openModal(); return; }
+
+      addMessage(text, "user-msg");
+      inputEl.value = "";
+      chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+      document.getElementById("core-text").innerText = "THINKING";
+
+      try {
+        const url = `https://googleapis.com{apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: "You are JARVIS, a smart, polite, and helpful AI assistant like Tony Stark's AI. Reply concisely in Bengali (or the language the user speaks) and address the user as 'স্যার' (Sir) occasionally." }]
+            },
+            contents: chatHistory
+          })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
+        const reply = data.candidates[0].content.parts[0].text;
+        chatHistory.push({ role: "model", parts: [{ text: reply }] });
+        addMessage(reply, "ai-msg");
+        speak(reply);
+      } catch (err) {
+        addMessage("ত্রুটি হয়েছে: " + err.message, "ai-msg");
+      } finally {
+        document.getElementById("core-text").innerText = "ONLINE";
+      }
+    }
+
+    function startListening() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("দুঃখিত, আপনার ব্রাউজার ভয়েস ইনপুট সাপোর্ট করে না। Google Chrome ব্যবহার করুন।");
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'bn-BD';
+      const core = document.getElementById("core");
+      const micBtn = document.getElementById("mic-btn");
+
+      recognition.onstart = () => {
+        core.classList.add("listening");
+        micBtn.classList.add("active");
+        document.getElementById("core-text").innerText = "LISTENING";
+      };
+
+      recognition.onresult = (event) => {
